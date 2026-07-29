@@ -211,35 +211,20 @@ def main() -> None:
     print(f"Uploading {size} bytes to GitHub release {release['tag_name']}", flush=True)
     asset = github_upload(upload_url, archive)
 
-    storage_url = required("STORAGE_BASE_URL").rstrip("/") + "/api/v1/files/import"
-    registration = {
+    if int(asset["size"]) != size:
+        raise RuntimeError("GitHub returned mismatched artifact size")
+    result = {
         "file_name": file_name,
         "content_type": "application/zip",
         "sha256": digest,
         "size": size,
         "provider_container_id": str(release["id"]),
         "provider_object_id": str(asset["id"]),
+        "provider_object_name": asset["name"],
+        "download_url": asset["browser_download_url"],
     }
-    request = urllib.request.Request(
-        storage_url,
-        data=json.dumps(registration).encode("utf-8"),
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {required('LAPASTORAGE_API_TOKEN')}",
-            "Content-Type": "application/json",
-            "User-Agent": "LapaStorage-archive-composer",
-        },
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            result = json.load(response)
-    except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", "replace")
-        raise RuntimeError(f"LapaStorage returned {error.code}: {detail}") from error
-    if result.get("size") != size or result.get("sha256") != digest:
-        raise RuntimeError("LapaStorage returned mismatched artifact metadata")
     pathlib.Path("result.json").write_text(
-        json.dumps({"request_id": request_id, "file": result}, indent=2) + "\n",
+        json.dumps({"request_id": request_id, "provider_asset": result}, indent=2) + "\n",
         encoding="utf-8",
     )
 

@@ -20,11 +20,6 @@ on:
         description: Base64 JSON patch specification
         required: true
         type: string
-      storage_base_url:
-        description: Public LapaStorage base URL
-        required: true
-        default: https://storage.fblapa.ru
-        type: string
 
 permissions:
   contents: write
@@ -45,11 +40,9 @@ jobs:
           BASE_ARCHIVE_URL: ${{ inputs.base_archive_url }}
           FILE_NAME: ${{ inputs.file_name }}
           GH_TOKEN: ${{ github.token }}
-          LAPASTORAGE_API_TOKEN: ${{ secrets.LAPASTORAGE_API_TOKEN }}
           PATCH_SPEC_BASE64: ${{ inputs.patch_spec_base64 }}
           REPOSITORY: ${{ github.repository }}
           REQUEST_ID: ${{ inputs.request_id }}
-          STORAGE_BASE_URL: ${{ inputs.storage_base_url }}
         run: python3 .github/scripts/compose_modpack_archive.py
 
       - name: Return registered artifact metadata
@@ -59,4 +52,3 @@ jobs:
           path: result.json
           if-no-files-found: error
           retention-days: 1
-
