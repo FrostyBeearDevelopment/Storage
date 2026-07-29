@@ -1,0 +1,62 @@
+name: Compose modpack archive
+run-name: modpack archive ${{ inputs.request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Correlation UUID
+        required: true
+        type: string
+      file_name:
+        description: Logical LapaStorage file name
+        required: true
+        type: string
+      base_archive_url:
+        description: Immutable previous full-install ZIP
+        required: true
+        type: string
+      patch_spec_base64:
+        description: Base64 JSON patch specification
+        required: true
+        type: string
+      storage_base_url:
+        description: Public LapaStorage base URL
+        required: true
+        default: https://storage.fblapa.ru
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: modpack-archive-${{ inputs.request_id }}
+  cancel-in-progress: false
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compose, upload, and register archive
+        env:
+          BASE_ARCHIVE_URL: ${{ inputs.base_archive_url }}
+          FILE_NAME: ${{ inputs.file_name }}
+          GH_TOKEN: ${{ github.token }}
+          LAPASTORAGE_API_TOKEN: ${{ secrets.LAPASTORAGE_API_TOKEN }}
+          PATCH_SPEC_BASE64: ${{ inputs.patch_spec_base64 }}
+          REPOSITORY: ${{ github.repository }}
+          REQUEST_ID: ${{ inputs.request_id }}
+          STORAGE_BASE_URL: ${{ inputs.storage_base_url }}
+        run: python3 .github/scripts/compose_modpack_archive.py
+
+      - name: Return registered artifact metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: modpack-archive-result-${{ inputs.request_id }}
+          path: result.json
+          if-no-files-found: error
+          retention-days: 1
+
